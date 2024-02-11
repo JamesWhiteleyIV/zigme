@@ -21,7 +21,6 @@ async function sendPushoverAlarm(title: string, message: string) {
         priority: 1,
         sound: "persistent",
     };
-    console.log(payload);
     const res = await fetch('https://api.pushover.net/1/messages.json', {
         method: 'POST',
         headers: {
@@ -44,7 +43,6 @@ async function sendPushoverNotification(title: string, message: string) {
         message: message,
         priority: 0,
     };
-    console.log(payload);
     const res = await fetch('https://api.pushover.net/1/messages.json', {
         method: 'POST',
         headers: {
@@ -60,9 +58,7 @@ async function sendPushoverNotification(title: string, message: string) {
 /** @type {import('./$types').RequestHandler} */
 export async function POST({ request }) {
     const alarmPayload: AlarmPayload = await request.json();
-	// return new Response(String(random));
     if (phoneAlarmStateValue) {
-        // return json({ok: "sounding alarm!"});
         const result = await sendPushoverAlarm(alarmPayload.title, alarmPayload.message);
         return json(result);
     } else {

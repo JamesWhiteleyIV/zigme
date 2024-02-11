@@ -13,6 +13,20 @@
     function phoneAlarmOn() {
         phoneAlarmState.set(true);
 	}
+
+    let lastResponse = '';
+    async function testAlarmTrigger() {
+        const payload = {
+            title: "test-title",
+            message: "test-message",
+        };
+        const res = await fetch("/alarmtrigger", {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
+        const json = await res.json()
+        lastResponse = JSON.stringify(json);
+    }    
 </script>
 
 
@@ -24,3 +38,8 @@
 
 <Button on:click={phoneAlarmOn}>Turn ON</Button>
 <Button on:click={phoneAlarmOff}>Turn OFF</Button>
+<br>
+<br>
+
+<Button on:click={testAlarmTrigger}>Test Alarm Trigger</Button>
+<p>{lastResponse}</p>
