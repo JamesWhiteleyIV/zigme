@@ -7,7 +7,6 @@ phoneAlarmState.subscribe(value => {
 });
 
 export type AlarmPayload = {
-    // type: "phone" | "local-siren";
     title: string;
     message: string;
 };
@@ -16,43 +15,58 @@ export type AlarmPayload = {
 async function sendPushoverAlarm(title: string, message: string) {
     const payload = {
         token: import.meta.env.VITE_PUSHOVER_API_TOKEN,
-        user: import.meta.env.VITE_PUSHOVER_GROUP_TOKEN,
+        user: import.meta.env.VITE_PUSHOVER_GROUP_KEY,
         title: title,
         message: message,
         priority: 1,
         sound: "persistent",
     };
+    console.log(payload);
     const res = await fetch('https://api.pushover.net/1/messages.json', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+        body: JSON.stringify(payload),
     })
     const json = await res.json()
-    console.log(json);
+    return json;
 }
+
 
 // send request to pushover to trigger notification
 async function sendPushoverNotification(title: string, message: string) {
     const payload = {
         token: import.meta.env.VITE_PUSHOVER_API_TOKEN,
-        user: import.meta.env.VITE_PUSHOVER_GROUP_TOKEN,
+        user: import.meta.env.VITE_PUSHOVER_GROUP_KEY,
         title: title,
         message: message,
         priority: 0,
     };
+    console.log(payload);
     const res = await fetch('https://api.pushover.net/1/messages.json', {
         method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
         body: JSON.stringify(payload)
     })
     const json = await res.json()
-    console.log(json);
+    return json;
 }
 
 /** @type {import('./$types').RequestHandler} */
-export function POST({ request }) {
+export async function POST({ request }) {
+    const alarmPayload: AlarmPayload = await request.json();
 	// return new Response(String(random));
-    if (phoneAlarmState) {
-        return json({ok: "sounding alarm!"});
+    if (phoneAlarmStateValue) {
+        // return json({ok: "sounding alarm!"});
+        const result = await sendPushoverAlarm(alarmPayload.title, alarmPayload.message);
+        return json(result);
     } else {
-        return json({ok: "notification!"});
+        const result = await sendPushoverNotification(alarmPayload.title, alarmPayload.message);
+        return json(result);
     }
 }

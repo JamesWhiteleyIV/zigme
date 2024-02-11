@@ -3,6 +3,7 @@ import requests
 
 res =requests.post('http://localhost:5173/alarmtrigger', 
               json={
-                "test": "ok"
+                "title": "test-title",
+                "message": "test-message",
               })
 print(res.json())
