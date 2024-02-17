@@ -1,50 +1,56 @@
 <script lang="ts">
     import Button from '$lib/components/ui/button/button.svelte';
 
-    import { io } from "socket.io-client";
-
-    const socket = io("ws://localhost:8000");
-
-    let phoneAlarmStateValue = false;
+	/** @type {import('./$types').PageData} */
+	export let data: AlarmState;
+    let alarmState = data;
+    
+    async function phoneAlarmOn() {
+        const payload = {
+            phone_alarms: true,
+            phone_notifications: false,
+        };
+        const res = await fetch("/alarm_state", {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+        });
+        alarmState = await res.json();
+        console.log(alarmState);
+	}
 
     async function phoneAlarmOff() {
-        const res = await fetch("/alarmstate/false", {
+        const payload = {
+            phone_alarms: false,
+            phone_notifications: true,
+        };
+        const res = await fetch("/alarm_state", {
             method: 'PUT',
-        })
-        const json = await res.json()
-        lastResponse = JSON.stringify(json);
- 
-	}
-    function phoneAlarmOn() {
-        // phoneAlarmState.set(true);
+            body: JSON.stringify(payload)
+        });
+        alarmState = await res.json();
+        console.log(alarmState);
 	}
 
-    let lastResponse = '';
     async function testAlarmTrigger() {
-        const payload = {
-            title: "test-title",
-            message: "test-message",
-        };
-        const res = await fetch("/alarmtrigger", {
+        const res = await fetch("/alarm_trigger", {
             method: 'POST',
-            body: JSON.stringify(payload)
         })
-        const json = await res.json()
-        lastResponse = JSON.stringify(json);
+        const data = await res.json()
+        console.log(data);
     }    
 </script>
 
 
-{#if phoneAlarmStateValue}
-    <h1>Alarm State: <span style="color: red">ON</span></h1>
-{:else}
-    <h1>Alarm State: <span style="color: green">OFF</span></h1>
-{/if}
+<span>
+    <Button on:click={phoneAlarmOn}>Turn ON</Button>
+    <Button on:click={phoneAlarmOff}>Turn OFF</Button>
+    {#if alarmState.phone_alarms}
+        <span style="color: red">ALARM IS ON</span>
+    {:else}
+        <span style="color: green">ALARM IS OFF</span>
+    {/if}
+</span>
 
-<Button on:click={phoneAlarmOn}>Turn ON</Button>
-<Button on:click={phoneAlarmOff}>Turn OFF</Button>
 <br>
 <br>
-
 <Button on:click={testAlarmTrigger}>Test Alarm Trigger</Button>
-<p>{lastResponse}</p>
