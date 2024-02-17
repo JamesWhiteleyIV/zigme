@@ -1,10 +1,6 @@
-import { phoneAlarmState } from "$lib/store";
 import { json } from '@sveltejs/kit';
 
 let phoneAlarmStateValue = false;
-phoneAlarmState.subscribe(value => {
-    value ? phoneAlarmStateValue = true : phoneAlarmStateValue = false;
-});
 
 export type AlarmPayload = {
     title: string;

@@ -1,13 +1,29 @@
 import { json } from '@sveltejs/kit';
+import { get } from 'svelte/store';
+import fs from "fs";
 
-let state = false;
+const STATE_FILENAME = "state.txt";
 
-// send request to pushover to trigger alarm
-async function setState(state: boolean) {
-    state = state;
-}
+import { page } from '$app/stores';
+
+let state = '?';
 
 /** @type {import('./$types').RequestHandler} */
 export async function PUT({ params }) {
-    return json({});
+    fs.writeFile(STATE_FILENAME, params.state, (err) => {
+        if (err) throw err;
+    })
+    state = params.state;
+    return json({state: state});
 }
+
+/** @type {import('./$types').RequestHandler} */
+export async function GET() {
+    fs.readFile(STATE_FILENAME, (err, inputD) => {
+        if (err) throw err;
+           console.log(inputD.toString());
+           state = inputD.toString();
+     })
+    return json({state: state});
+}
+

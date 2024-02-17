@@ -18,3 +18,6 @@ Run dev server
 ```
 npm run dev -- --open
 ```
+
+# components
+https://www.shadcn-svelte.com/docs/components/card

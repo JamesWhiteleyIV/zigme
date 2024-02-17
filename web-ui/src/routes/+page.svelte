@@ -1,17 +1,22 @@
 <script lang="ts">
-    import { phoneAlarmState } from '$lib/store';
     import Button from '$lib/components/ui/button/button.svelte';
 
-    let phoneAlarmStateValue = false;
-    phoneAlarmState.subscribe(value => {
-        value ? phoneAlarmStateValue = true : phoneAlarmStateValue = false;
-    });
+    import { io } from "socket.io-client";
 
-    function phoneAlarmOff() {
-        phoneAlarmState.set(false);
+    const socket = io("ws://localhost:8000");
+
+    let phoneAlarmStateValue = false;
+
+    async function phoneAlarmOff() {
+        const res = await fetch("/alarmstate/false", {
+            method: 'PUT',
+        })
+        const json = await res.json()
+        lastResponse = JSON.stringify(json);
+ 
 	}
     function phoneAlarmOn() {
-        phoneAlarmState.set(true);
+        // phoneAlarmState.set(true);
 	}
 
     let lastResponse = '';
