@@ -1,5 +1,5 @@
 {
     "rust-analyzer.linkedProjects": [
-        "./web-api/Cargo.toml"
+        "./zigme-api/Cargo.toml"
     ]
 }

@@ -8,10 +8,11 @@ npm and node; I used the following environment:
 - node v21.6.1
 
 
+# TODO info on running rust stuff and requirements
 ## How to develop
 Install dependencies
 ```
-cd web-ui
+cd zigme-ui
 npm install
 ```
 Run dev server

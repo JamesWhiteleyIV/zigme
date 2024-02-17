@@ -6,7 +6,7 @@ export async function POST() {
         title: "test-title",
         message: "test-message",
     };
-    const res = await fetch("http://localhost:3000/alarm_trigger", {
+    const res = await fetch(`${import.meta.env.VITE_ZIGME_API_URI}/alarm_trigger`, {
         method: 'POST',
         body: JSON.stringify(payload),
         headers: {
