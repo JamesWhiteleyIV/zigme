@@ -1,12 +1,16 @@
 use rumqttc::{Event, Packet, Publish};
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use serde::Serialize;
+use tracing::dispatcher::set_global_default;
 use std::time::Duration;
 use std::env;
 use anyhow::Result;
 use tracing::{error, info, instrument};
-use opentelemetry::{global, trace::{Tracer, TraceError}};
-use opentelemetry_sdk::runtime::Tokio;
+use opentelemetry::runtime;
+use opentelemetry::global;
+use tracing_subscriber::{
+    fmt, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
 /// Payload passed along with alarm trigger with
 /// information about what was triggered
@@ -67,8 +71,54 @@ async fn handle_incoming_mqtt_packet(p: Publish) -> Result<()> {
 #[instrument]
 #[tokio::main]
 async fn main() {
+    // construct a subscriber that prints formatted traces to stdout
+    // let subscriber = tracing_subscriber::FmtSubscriber::new();
+
+    // Start configuring a `fmt` subscriber
+    let subscriber = tracing_subscriber::fmt()
+        // Use a more compact, abbreviated log format
+        .compact()
+        // Display source code file paths
+        .with_file(true)
+        // Display source code line numbers
+        .with_line_number(true)
+        // Display the thread ID an event was recorded on
+        .with_thread_ids(true)
+        // Don't display the event's target (module path)
+        .with_target(false)
+        // Build the subscriber
+        .finish();
+
+    // use that subscriber to process traces emitted after this point
+    // tracing::subscriber::set_global_default(subscriber).unwrap();
+
+
+    // Allows you to pass along context (i.e., trace IDs) across services
     global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-    let tracer = opentelemetry_jaeger::new_agent_pipeline().install_batch(Tokio).unwrap();
+    // Sets up the machinery needed to export data to Jaeger
+    // There are other OTel crates that provide pipelines for the vendors
+    // mentioned earlier.
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name("zigme-eventhandler")
+        .install_batch(opentelemetry::runtime::Tokio).unwrap();
+
+        // .install_simple().unwrap();
+
+    // Create a tracing layer with the configured tracer
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    // The SubscriberExt and SubscriberInitExt traits are needed to extend the
+    // Registry to accept `opentelemetry (the OpenTelemetryLayer type).
+    tracing_subscriber::registry()
+        .with(opentelemetry)
+        // Continue logging to stdout
+        .with(fmt::Layer::default())
+        .try_init().unwrap();
+
+
+
+    // global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
+    // let tracer = opentelemetry_jaeger::new_agent_pipeline().install_batch(Tokio).unwrap();
     // tracer.in_span("doing_work", |cx| {
     //     // Traced app logic here...
     // });
@@ -98,6 +148,6 @@ async fn main() {
         }
     }
 
-    global::shutdown_tracer_provider(); // export remaining spans
+    // global::shutdown_tracer_provider(); // export remaining spans
 }
 
