@@ -13,7 +13,8 @@ use super::alarm_state;
 
 const PUSHOVER_URI: &str = "https://api.pushover.net/1/messages.json";
 
-/// Struct containing state of various alarms and notifications
+/// Payload passed along with alarm trigger with
+/// information about what was triggered
 #[derive(Debug, Deserialize)]
 pub struct AlarmTriggerPayload {
     title: String,
