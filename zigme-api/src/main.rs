@@ -10,15 +10,15 @@ use axum::{
 };
 use db::RedisClient;
 use std::sync::Arc;
+use std::env;
 use dotenv;
-
-const REDIS_URI: &str = "redis://127.0.0.1/";
 
 #[tokio::main]
 async fn main() {
     dotenv::dotenv().ok();
-
-    let redis_client = Arc::new(RedisClient::new(REDIS_URI).await);
+    let port = env::var("ZIGME_API_PORT").unwrap();
+    let redis_uri = env::var("ZIGME_PUSHOVER_API_TOKEN").unwrap();
+    let redis_client = Arc::new(RedisClient::new(&redis_uri).await);
 
     let app = Router::new()
         .route("/", get(|| async { "OK" }))
@@ -32,6 +32,6 @@ async fn main() {
         )
         .with_state(redis_client);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
