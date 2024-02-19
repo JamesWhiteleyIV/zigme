@@ -1,3 +1,4 @@
+// TODO: possibly roll back - cannot figure out why tracing isn't all going up!!!
 #![warn(clippy::pedantic)]
 use anyhow::Result;
 use opentelemetry::global;
@@ -34,14 +35,11 @@ fn setup_tracer() {
 }
 
 #[instrument]
-async fn handle_incoming_event(event: Event) {
-    // dbg!(&event);
+async fn handle_incoming_event(event: Event) -> Result<()> {
     if let Event::Incoming(Packet::Publish(p)) = event {
-        match handle_incoming_mqtt_packet(p).await {
-            Ok(()) => {}
-            Err(e) => error!("{}", e),
-        }
+        handle_incoming_mqtt_packet(p).await?; 
     }
+    Ok(())
 }
 
 /// Attempt to parse zigbee2mqtt/front-door => front-door
@@ -59,23 +57,27 @@ async fn handle_incoming_mqtt_packet(p: Publish) -> Result<()> {
     let topic = p.topic;
     let sensor_location = parse_topic(&topic);
     let payload = serde_json::from_slice::<serde_json::Value>(&p.payload)?;
-    info!(payload = payload.to_string());
+    // info!(payload = payload.to_string());
 
     // Handle vibration sensor trigger
     if let Some(vibration) = payload.get("vibration") {
         if vibration == true {
-            send_alarm_event_request(sensor_location, "vibration triggered").await?;
-            info!(sensor_location, sensor_event = "VIBRATION");
+            match send_alarm_event_request(sensor_location, "VIBRATION").await {
+                Ok(()) => info!(sensor_event = format!("{} VIBRATION", sensor_location)),
+                Err(e) => error!("{}", e)
+            }
         }
     }
 
     // Handle contact sensor trigger
     if let Some(contact) = payload.get("contact") {
         if contact == false {
-            send_alarm_event_request(sensor_location, "sensor opened").await?;
-            info!(sensor_location, sensor_event = "OPENED");
+            match send_alarm_event_request(sensor_location, "OPENED").await {
+                Ok(()) => info!(sensor_event = format!("{} OPENED", sensor_location)),
+                Err(e) => error!("{}", e)
+            }
         } else {
-            info!(sensor_location, sensor_event = "CLOSED");
+            info!(sensor_event = format!("{} CLOSED", sensor_location));
         }
     }
 
@@ -84,6 +86,7 @@ async fn handle_incoming_mqtt_packet(p: Publish) -> Result<()> {
 
 /// Send request to alarm trigger endpoint of our API to trigger
 /// whichever alarm(s) is/are currently set.
+#[instrument]
 async fn send_alarm_event_request(topic: &str, message: &str) -> Result<()> {
     let client = reqwest::Client::new();
     client
@@ -99,6 +102,7 @@ async fn send_alarm_event_request(topic: &str, message: &str) -> Result<()> {
     Ok(())
 }
 
+#[instrument]
 #[tokio::main]
 async fn main() {
     // Setup telemetry tracer
@@ -125,7 +129,10 @@ async fn main() {
 
     loop {
         if let Ok(event) = eventloop.poll().await {
-            handle_incoming_event(event).await;
+            match handle_incoming_event(event).await {
+                Ok(()) => {},
+                Err(e) => error!("{}", e)
+            }
         }
     }
 }
