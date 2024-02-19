@@ -3,6 +3,7 @@ mod errors;
 mod routes;
 use routes::alarm_state;
 use routes::alarm_trigger;
+use routes::logs;
 
 use axum::{
     routing::{get, post},
@@ -17,7 +18,7 @@ use dotenv;
 async fn main() {
     dotenv::dotenv().ok();
     let port = env::var("ZIGME_API_PORT").unwrap();
-    let redis_uri = env::var("ZIGME_PUSHOVER_API_TOKEN").unwrap();
+    let redis_uri = env::var("ZIGME_REDIS_URI").unwrap();
     let redis_client = Arc::new(RedisClient::new(&redis_uri).await);
 
     let app = Router::new()
@@ -29,6 +30,10 @@ async fn main() {
         .route(
             "/alarm_trigger",
             post(alarm_trigger::post_alarm_trigger_handler)
+        )
+        .route(
+            "/logs",
+            get(logs::get_logs_handler)
         )
         .with_state(redis_client);
 
