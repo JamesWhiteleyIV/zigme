@@ -20,6 +20,7 @@ pub struct AlarmState {
     local_siren: Option<bool>,
 }
 
+#[instrument(skip(redis_client))]
 async fn get_alarm_state(redis_client: Arc<RedisClient>) -> Result<AlarmState, AppError> {
     let phone_alarms: Option<bool> = redis_client.get(STATE_PHONE_ALARMS).await?;
     let phone_notifications: Option<bool> = redis_client.get(STATE_PHONE_NOTIFICATIONS).await?;
@@ -33,6 +34,7 @@ async fn get_alarm_state(redis_client: Arc<RedisClient>) -> Result<AlarmState, A
 }
 
 /// Update 1 or more alarm states and return all states as response
+#[instrument(skip(redis_client))]
 pub async fn put_alarm_state_handler(
     State(redis_client): State<Arc<RedisClient>>,
     Json(payload): Json<AlarmState>,
@@ -54,6 +56,7 @@ pub async fn put_alarm_state_handler(
 }
 
 /// Get current alarm states
+#[instrument(skip(redis_client))]
 pub async fn get_alarm_state_handler(
     State(redis_client): State<Arc<RedisClient>>,
 ) -> Result<Json<AlarmState>, AppError> {
