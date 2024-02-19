@@ -1,12 +1,10 @@
 use rumqttc::{Event, Packet, Publish};
 use rumqttc::{AsyncClient, MqttOptions, QoS};
 use serde::Serialize;
-use tracing::dispatcher::set_global_default;
 use std::time::Duration;
 use std::env;
 use anyhow::Result;
-use tracing::{error, info, instrument};
-use opentelemetry::runtime;
+use tracing::{error, info, instrument, Level};
 use opentelemetry::global;
 use tracing_subscriber::{
     fmt, layer::SubscriberExt, util::SubscriberInitExt,
@@ -22,9 +20,9 @@ pub struct AlarmTriggerPayload {
 
 /// Send request to alarm_trigger endpoint of our API to trigger
 /// whichever alarm(s) is/are currently set.
-#[instrument]
+// #[instrument]
 async fn send_alarm_event_request(title: &str, message: &str) -> Result<()> {
-    info!("zigme-eventhandler sending to alarm trigger endpoint: TITLE={:?} MESSAGE{:?}", title, message);
+    info!("sending TITLE={:?} MESSAGE{:?}", title, message);
     let endpoint = env::var("ZIGME_API_ALARM_TRIGGER_URI")?;
     let payload = AlarmTriggerPayload {
         title: title.to_string(),
@@ -39,15 +37,15 @@ async fn send_alarm_event_request(title: &str, message: &str) -> Result<()> {
         .text()
         .await?;
 
-    info!("Response from alarm trigger endpoint: {:?}", &response);
+    info!("response: {:?}", &response);
     Ok(())
 }
 
 /// Handles parsing of incoming MQTT message and routing to our API
-#[instrument]
+// #[instrument]
 async fn handle_incoming_mqtt_packet(p: Publish) -> Result<()> {
     if let Ok(payload) = serde_json::from_slice::<serde_json::Value>(&p.payload) {
-        info!("zigme-eventhandler received packet TOPIC={:?} PAYLOAD={:?}", p.topic, payload);
+        info!("received mqtt packet TOPIC={:?} PAYLOAD={:?}", p.topic, payload);
 
         // handle vibration sensor trigger
         if let Some(vibration) = payload.get("vibration") {
@@ -68,62 +66,62 @@ async fn handle_incoming_mqtt_packet(p: Publish) -> Result<()> {
 }
  
 
-#[instrument]
+// #[instrument]
 #[tokio::main]
 async fn main() {
-    // construct a subscriber that prints formatted traces to stdout
-    // let subscriber = tracing_subscriber::FmtSubscriber::new();
-
-    // Start configuring a `fmt` subscriber
-    let subscriber = tracing_subscriber::fmt()
-        // Use a more compact, abbreviated log format
-        .compact()
-        // Display source code file paths
-        .with_file(true)
-        // Display source code line numbers
-        .with_line_number(true)
-        // Display the thread ID an event was recorded on
-        .with_thread_ids(true)
-        // Don't display the event's target (module path)
-        .with_target(false)
-        // Build the subscriber
-        .finish();
-
-    // use that subscriber to process traces emitted after this point
-    // tracing::subscriber::set_global_default(subscriber).unwrap();
-
+    dotenv::dotenv().ok();
 
     // Allows you to pass along context (i.e., trace IDs) across services
     global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
+
     // Sets up the machinery needed to export data to Jaeger
     // There are other OTel crates that provide pipelines for the vendors
     // mentioned earlier.
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name("zigme-eventhandler")
         .install_batch(opentelemetry::runtime::Tokio).unwrap();
-
         // .install_simple().unwrap();
-
     // Create a tracing layer with the configured tracer
     let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
+    // FmtSubscriber
+    // TODO does this do anything?
+    // let subscriber = tracing_subscriber::fmt()
+    //     // Use a more compact, abbreviated log format
+    //     .compact()
+    //     // Display source code file paths
+    //     .with_file(true)
+    //     // Display source code line numbers
+    //     .with_line_number(true)
+    //     // Display the thread ID an event was recorded on
+    //     .with_thread_ids(true)
+    //     // Don't display the event's target (module path)
+    //     .with_target(false)
+    //     // Set log level
+    //     .with_max_level(Level::INFO)
+    //     // Build the subscriber
+    //     .finish();
+
+    // Continue logging to stdout
+    // let layer = fmt::Layer::default();
     // The SubscriberExt and SubscriberInitExt traits are needed to extend the
     // Registry to accept `opentelemetry (the OpenTelemetryLayer type).
+    let filter = tracing_subscriber::filter::Targets::new()
+    .with_default(Level::INFO);
+    // .with_target("tower_http::trace::on_response", Level::TRACE)
+    // .with_target("tower_http::trace::on_request", Level::TRACE)
+
     tracing_subscriber::registry()
         .with(opentelemetry)
-        // Continue logging to stdout
         .with(fmt::Layer::default())
+        .with(filter)
         .try_init().unwrap();
 
-
-
-    // global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-    // let tracer = opentelemetry_jaeger::new_agent_pipeline().install_batch(Tokio).unwrap();
+    // TODO: what does this do????
     // tracer.in_span("doing_work", |cx| {
     //     // Traced app logic here...
-    // });
+    //});
 
-    dotenv::dotenv().ok();
     let mqtt_host = env::var("ZIGME_MQTT_HOST").unwrap();
     let mqtt_port: u16 = env::var("ZIGME_MQTT_PORT").unwrap().parse().expect("Could not parse ZIGME_MQTT_PORT as u16");
     let mqtt_topic = env::var("ZIGME_MQTT_TOPIC").unwrap();
@@ -137,6 +135,7 @@ async fn main() {
     loop {
         match eventloop.poll().await {
             Ok(Event::Incoming(Packet::Publish(p))) => {
+
                 match handle_incoming_mqtt_packet(p).await {
                     Ok(_) => {},
                     Err(e) => error!("{}", e)
@@ -148,6 +147,7 @@ async fn main() {
         }
     }
 
+    // TODO: is this required to push all remaining traces??
     // global::shutdown_tracer_provider(); // export remaining spans
 }
 
