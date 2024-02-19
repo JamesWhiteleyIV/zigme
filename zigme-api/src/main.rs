@@ -3,7 +3,6 @@ mod errors;
 mod routes;
 use routes::alarm_state;
 use routes::alarm_trigger;
-use routes::logs;
 
 use axum::{
     routing::{get, post},
@@ -30,10 +29,6 @@ async fn main() {
         .route(
             "/alarm_trigger",
             post(alarm_trigger::post_alarm_trigger_handler)
-        )
-        .route(
-            "/logs",
-            get(logs::get_logs_handler)
         )
         .with_state(redis_client);
 

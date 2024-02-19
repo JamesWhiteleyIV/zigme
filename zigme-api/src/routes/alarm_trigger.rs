@@ -54,8 +54,8 @@ async fn send_local_siren_stop() -> Result<String, AppError> {
 /// Send request to pushover to trigger notification on phone
 async fn send_phone_notifications(title: &str, message: &str) -> Result<String, AppError> {
     let payload = PushoverPayload {
-        token: env::var("PUSHOVER_API_TOKEN")?,
-        user: env::var("PUSHOVER_GROUP_KEY")?,
+        token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
+        user: env::var("ZIGME_PUSHOVER_GROUP_KEY")?,
         title: title.to_string(),
         message: message.to_string(),
         priority: 0,
@@ -76,8 +76,8 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
 /// Send request to pushover to trigger alarm on phone
 async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppError> {
     let payload = PushoverPayload {
-        token: env::var("PUSHOVER_API_TOKEN")?,
-        user: env::var("PUSHOVER_GROUP_KEY")?,
+        token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
+        user: env::var("ZIGME_PUSHOVER_GROUP_KEY")?,
         title: title.to_string(),
         message: message.to_string(),
         priority: 1,
