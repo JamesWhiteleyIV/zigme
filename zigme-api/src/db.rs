@@ -1,6 +1,8 @@
 use redis::{Client, Commands, Connection, FromRedisValue, RedisResult, ToRedisArgs};
+use serde::{Deserialize, Serialize};
 
 /// Struct for holding a redis client connection
+#[derive(Debug)]
 pub struct RedisClient {
     client: Client,
 }

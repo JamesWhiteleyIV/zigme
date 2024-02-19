@@ -1,10 +1,10 @@
 #![warn(clippy::pedantic)]
 use anyhow::Result;
-use opentelemetry::global;
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, Publish, QoS};
 use serde_json::json;
 use std::env;
 use std::time::Duration;
+use opentelemetry::global;
 use tracing::{error, instrument, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -66,6 +66,7 @@ fn setup_tracer() {
         .try_init()
         .unwrap();
 }
+
 
 /// Attempt to parse zigbee2mqtt/front-door => front-door
 fn parse_topic(topic: &str) -> &str {

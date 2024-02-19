@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use reqwest;
 use std::env;
+use tracing::{error, instrument, Level, info_span, Span};
 use super::alarm_state;
 
 const PUSHOVER_URI: &str = "https://api.pushover.net/1/messages.json";
@@ -52,6 +53,7 @@ async fn send_local_siren_stop() -> Result<String, AppError> {
 }
 
 /// Send request to pushover to trigger notification on phone
+#[instrument]
 async fn send_phone_notifications(title: &str, message: &str) -> Result<String, AppError> {
     let payload = PushoverPayload {
         token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
@@ -74,6 +76,7 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
 
 
 /// Send request to pushover to trigger alarm on phone
+#[instrument]
 async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppError> {
     let payload = PushoverPayload {
         token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
@@ -97,6 +100,7 @@ async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppErro
 
 /// Submit a trigger which will trigger any set alarms/notifications
 /// from the redis db
+#[instrument(skip(redis_client))]
 pub async fn post_alarm_trigger_handler(
     State(redis_client): State<Arc<RedisClient>>,
     Json(payload): Json<AlarmTriggerPayload>,
