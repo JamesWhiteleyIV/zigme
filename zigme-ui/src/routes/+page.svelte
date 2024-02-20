@@ -1,10 +1,16 @@
 <!-- Main rendered page -->
+
 <script lang="ts">
-    import Button from '$lib/components/ui/button/button.svelte';
+    import * as Card from "$lib/components/ui/card";
+    import * as Collapsible from "$lib/components/ui/collapsible";
+    import { Button } from "$lib/components/ui/button";
+    import { Sun, Moon, BellOff, BellRing, ChevronsUpDown } from "lucide-svelte";
+    import { toggleMode } from "mode-watcher";
 
 	/** @type {import('./$types').PageData} */
-	export let data: AlarmState;
-    let alarmState = data;
+	export let data;
+    let alarmState: AlarmState = data;
+    console.log(alarmState);
     
     async function phoneAlarmOn() {
         const payload = {
@@ -42,16 +48,53 @@
 </script>
 
 
-<span>
-    <Button on:click={phoneAlarmOn}>Turn ON</Button>
-    <Button on:click={phoneAlarmOff}>Turn OFF</Button>
-    {#if alarmState.phone_alarms}
-        <span style="color: red">ALARM IS ON</span>
-    {:else}
-        <span style="color: green">ALARM IS OFF</span>
-    {/if}
-</span>
+  <Card.Root>
+    <Card.Header>
+        <Card.Title>
+            {#if alarmState.phone_alarms}
+                <span style="color: red">ALARM IS ON</span>
+            {:else}
+                <span style="color: green">ALARM IS OFF</span>
+            {/if}
+        </Card.Title>
+    </Card.Header>
+    <Card.Content>
+        <Button on:click={phoneAlarmOn} variant="outline">
+            <BellRing class="mr-2 h-[1.2rem] w-[1.2rem]" />
+            Turn ON
+        </Button>
 
-<br>
-<br>
-<Button on:click={testAlarmTrigger}>Test Alarm Trigger</Button>
+        <Button on:click={phoneAlarmOff} variant="outline">
+            <BellOff class="mr-2 h-[1.2rem] w-[1.2rem]" />
+            Turn OFF
+        </Button>
+
+        <Button on:click={toggleMode} variant="outline" size="icon">
+                <Sun
+                class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+                />
+                <Moon
+                class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+                />
+                <span class="sr-only">Toggle theme</span>
+            </Button>
+    </Card.Content>
+    <Card.Footer>
+        <Collapsible.Root class="w-[200px] space-y-2">
+        <div class="flex items-center justify-between space-x-4 px-4">
+            <h4 class="text-sm font-semibold">Admin Testing</h4>
+            <Collapsible.Trigger asChild let:builder>
+            <Button builders={[builder]} variant="ghost" size="sm" class="w-12 p-0">
+                <ChevronsUpDown class="h-4 w-4" />
+            </Button>
+            </Collapsible.Trigger>
+        </div>
+        <Collapsible.Content class="space-y-2">
+            <Button on:click={testAlarmTrigger} variant="destructive">
+                Test Alarm Trigger
+            </Button>
+        </Collapsible.Content>
+        </Collapsible.Root>
+    </Card.Footer>
+  </Card.Root>
+

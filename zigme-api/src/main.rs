@@ -48,7 +48,7 @@ async fn main() {
                         .map(MatchedPath::as_str);
 
                     info_span!(
-                        "zigme_api_request",
+                        "api_request",
                         method = ?request.method(),
                         matched_path,
                         some_other_field = tracing::field::Empty,

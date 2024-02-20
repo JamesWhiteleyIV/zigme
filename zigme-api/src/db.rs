@@ -38,4 +38,29 @@ impl RedisClient {
         let mut con = self.get_connection()?;
         con.set(key, value)
     }
+
+    /// Function to push a new item onto the end of the list
+    pub fn push_item(&self, list_key: &str, item: &str) -> RedisResult<()> {
+        let mut con = self.get_connection()?;
+        con.rpush(list_key, item)
+    }
+
+    // Function to check the length of the list
+    fn get_list_length(&self, list_key: &str) -> RedisResult<u64> {
+        let mut con = self.get_connection()?;
+        con.llen(list_key)
+    }
+
+    // Function to remove the oldest item from the front of the list if it exceeds the maximum size
+    pub fn remove_oldest_item(&self, list_key: &str, max_size: u64) -> RedisResult<()> {
+        let mut con = self.get_connection()?;
+        let length: u64 = self.get_list_length(list_key)?;
+
+        if length > max_size {
+            con.lpop(list_key, None)?;
+        }
+
+        RedisResult::Ok(())
+    }
+
 }

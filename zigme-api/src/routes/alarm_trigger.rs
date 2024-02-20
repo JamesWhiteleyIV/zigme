@@ -114,5 +114,13 @@ pub async fn post_alarm_trigger_handler(
         }
     }
 
+    dbg!(1);
+    redis_client.push_item("events", &format!("{} {}", &payload.title, &payload.message))?;
+    dbg!(2);
+    redis_client.remove_oldest_item("events", 20)?;
+    dbg!(3);
+    let events: Option<Vec<String>> = redis_client.get("events")?;
+    dbg!(events);
+
     Ok(Json(results))
 }
