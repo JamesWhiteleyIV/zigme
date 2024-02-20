@@ -1,34 +1,20 @@
+use super::alarm_state;
 use crate::db::RedisClient;
 use crate::errors::AppError;
-use axum::{
-    extract::State,
-    response::IntoResponse,
-    Json, 
-};
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use axum::{extract::State, response::IntoResponse, Json};
 use reqwest;
+use serde::{Deserialize, Serialize};
 use std::env;
-use tracing::{error, instrument, Level, info_span, Span};
-use super::alarm_state;
-
-const PUSHOVER_URI: &str = "https://api.pushover.net/1/messages.json";
+use std::sync::Arc;
+use tracing::instrument;
 
 /// Payload passed along with alarm trigger with
 /// information about what was triggered
 #[derive(Debug, Deserialize)]
-pub struct AlarmTriggerPayload {
+pub struct PostAlarmTriggerPayload {
     title: String,
     message: String,
 }
-
-
-/// Response containing what was triggered 
-#[derive(Debug, Serialize)]
-pub struct AlarmTriggerResponse{
-    triggers: Vec<String>
-}
-
 
 /// Struct containing payload body to Pushover API
 #[derive(Debug, Serialize)]
@@ -38,19 +24,18 @@ struct PushoverPayload {
     title: String,
     message: String,
     priority: u8,
-    sound: Option<String>
+    sound: Option<String>,
 }
-
 
 /// Send request to local server to start alarm siren
-async fn send_local_siren_start() -> Result<String, AppError> {
-    Ok("TODO".to_string())
-}
+// async fn send_local_siren_start() -> Result<String, AppError> {
+//     Ok("TODO".to_string())
+// }
 
 /// Send request to local server to stop alarm siren
-async fn send_local_siren_stop() -> Result<String, AppError> {
-    Ok("TODO".to_string())
-}
+// async fn send_local_siren_stop() -> Result<String, AppError> {
+//     Ok("TODO".to_string())
+// }
 
 /// Send request to pushover to trigger notification on phone
 #[instrument]
@@ -61,11 +46,11 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
         title: title.to_string(),
         message: message.to_string(),
         priority: 0,
-        sound: None
+        sound: None,
     };
     let client = reqwest::Client::new();
     let response = client
-        .post(PUSHOVER_URI)
+        .post(env::var("ZIGME_PUSHOVER_URI")?)
         .json(&payload)
         .send()
         .await?
@@ -73,7 +58,6 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
         .await?;
     Ok(response)
 }
-
 
 /// Send request to pushover to trigger alarm on phone
 #[instrument]
@@ -84,11 +68,11 @@ async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppErro
         title: title.to_string(),
         message: message.to_string(),
         priority: 1,
-        sound: Some("persistent".to_string())
+        sound: Some("persistent".to_string()),
     };
     let client = reqwest::Client::new();
     let response = client
-        .post(PUSHOVER_URI)
+        .post(env::var("ZIGME_PUSHOVER_URI")?)
         .json(&payload)
         .send()
         .await?
@@ -97,22 +81,23 @@ async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppErro
     Ok(response)
 }
 
-
 /// Submit a trigger which will trigger any set alarms/notifications
 /// from the redis db
 #[instrument(skip(redis_client))]
 pub async fn post_alarm_trigger_handler(
     State(redis_client): State<Arc<RedisClient>>,
-    Json(payload): Json<AlarmTriggerPayload>,
+    Json(payload): Json<PostAlarmTriggerPayload>,
 ) -> Result<impl IntoResponse, AppError> {
-    let local_siren: Option<bool> = redis_client.get(alarm_state::STATE_LOCAL_SIREN).await?;
-    let phone_alarms: Option<bool> = redis_client.get(alarm_state::STATE_PHONE_ALARMS).await?;
-    let phone_notifications: Option<bool> = redis_client.get(alarm_state::STATE_PHONE_NOTIFICATIONS).await?;
+    let local_siren: Option<bool> = redis_client.get(alarm_state::STATE_LOCAL_SIREN)?;
+    let phone_alarms: Option<bool> = redis_client.get(alarm_state::STATE_PHONE_ALARMS)?;
+    let phone_notifications: Option<bool> =
+        redis_client.get(alarm_state::STATE_PHONE_NOTIFICATIONS)?;
 
     let mut results: Vec<String> = vec![];
     if let Some(local_siren) = local_siren {
         if local_siren {
-            send_local_siren_start().await?;
+            // TODO
+            //send_local_siren_start().await?;
             results.push(alarm_state::STATE_LOCAL_SIREN.to_string());
         }
     }
@@ -133,5 +118,3 @@ pub async fn post_alarm_trigger_handler(
 
     Ok(Json(results))
 }
-
-

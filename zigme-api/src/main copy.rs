@@ -3,9 +3,7 @@ mod db;
 mod errors;
 mod routes;
 use axum::extract::MatchedPath;
-use axum::http::HeaderMap;
-use axum::http::Request;
-// use opentelemetry::trace::Span;
+use opentelemetry::trace::Span;
 use opentelemetry::trace::Tracer;
 use opentelemetry::Key;
 use opentelemetry::KeyValue;
@@ -14,19 +12,21 @@ use routes::alarm_trigger;
 
 use axum::{
     body::Bytes,
+    http::{HeaderMap, Request},
     response::Response,
     routing::{get, post},
     Router,
 };
-
 use db::RedisClient;
 use opentelemetry::global;
-use tracing::{error, info_span, Level, Span};
+use tracing::error;
+use tracing::info_span;
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::{classify::ServerErrorsFailureClass, trace::TraceLayer};
+use tracing::Level;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 
@@ -82,7 +82,6 @@ async fn main() {
                         propagator.extract(&example_carrier)
                     });
                     dbg!(&example_carrier);
-                    dbg!(&context);
 
                     // //(2)
                     // let mut span = global::tracer("zigme").start_with_context("http_request", &context);

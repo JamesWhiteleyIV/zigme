@@ -1,5 +1,4 @@
 use redis::{Client, Commands, Connection, FromRedisValue, RedisResult, ToRedisArgs};
-use serde::{Deserialize, Serialize};
 
 /// Struct for holding a redis client connection
 #[derive(Debug)]
@@ -9,34 +8,34 @@ pub struct RedisClient {
 
 impl RedisClient {
     /// Create redis client instance  
-    pub async fn new(redis_uri: &str) -> Self {
+    pub fn new(redis_uri: &str) -> Self {
         Self {
             client: Client::open(redis_uri).expect("Failed to open Redis connection"),
         }
     }
 
     // Get redis client instance
-    async fn get_connection(&self) -> RedisResult<Connection> {
+    fn get_connection(&self) -> RedisResult<Connection> {
         // Get a connection from the client
         self.client.get_connection()
     }
 
     /// Get a value from redis db
-    pub async fn get<T>(&self, key: &str) -> RedisResult<Option<T>>
+    pub fn get<T>(&self, key: &str) -> RedisResult<Option<T>>
     where
         T: FromRedisValue,
     {
-        let mut con = self.get_connection().await?;
+        let mut con = self.get_connection()?;
         let value: Option<T> = con.get(key)?;
         Ok(value)
     }
 
     /// Set a value from redis db
-    pub async fn set<T>(&self, key: &str, value: T) -> RedisResult<()>
+    pub fn set<T>(&self, key: &str, value: T) -> RedisResult<()>
     where
         T: ToRedisArgs,
     {
-        let mut con = self.get_connection().await?;
+        let mut con = self.get_connection()?;
         con.set(key, value)
     }
 }
