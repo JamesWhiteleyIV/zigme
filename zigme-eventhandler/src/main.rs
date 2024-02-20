@@ -1,28 +1,43 @@
 #![warn(clippy::pedantic)]
 use anyhow::Result;
-use opentelemetry::{global, trace::{TraceContextExt, Tracer}, Context};
-use reqwest::{header::{HeaderMap, HeaderName, HeaderValue}, Request};
+use opentelemetry::global;
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, Publish, QoS};
-use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tracing_opentelemetry::OpenTelemetrySpanExt;
-use std::{collections::HashMap, env};
+use std::env;
 use std::time::Duration;
-use tracing::{error, info, instrument, Level, Span};
+use tracing::{error, instrument, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
-use opentelemetry::{
-      propagation::Injector,
-  };
-  
+
 // Main event loop for subscribing to mqtt topic
 #[tokio::main]
 async fn main() {
     // Setup telemetry tracer
     setup_tracer();
-    dotenv::dotenv();
-    match send_alarm_event_request("SENSOR_LOCATION", "MESSAGE").await {
-        Ok(()) => info!("OK"),
-        Err(e) => error!("{e}")
+
+    // Load in environment vars
+    dotenv::dotenv().ok();
+
+    let mqtt_host: String = env::var("ZIGME_MQTT_HOST").unwrap();
+    let mqtt_port: u16 = env::var("ZIGME_MQTT_PORT")
+        .unwrap()
+        .parse()
+        .expect("Could not parse ZIGME_MQTT_PORT as u16");
+    let mqtt_topic: String = env::var("ZIGME_MQTT_TOPIC").unwrap();
+    let mut mqttoptions = MqttOptions::new("rumqtt-async", mqtt_host, mqtt_port);
+    mqttoptions.set_keep_alive(Duration::from_secs(10));
+
+    let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
+
+    client
+        .subscribe(mqtt_topic, QoS::ExactlyOnce)
+        .await
+        .unwrap();
+
+    loop {
+        // We only care about incoming publish packets
+        if let Ok(Event::Incoming(Packet::Publish(publish))) = eventloop.poll().await {
+            handle_incoming_publish_packet(publish).await;
+        }
     }
 }
 
@@ -52,77 +67,66 @@ fn setup_tracer() {
         .unwrap();
 }
 
-// pub fn send_trace<T>(mut request: Request) -> Result<Request> {
-//     global::get_text_map_propagator(|propagator| {
-//         let context = Span::current().context();
-//         propagator.inject_context(&context, &mut MetadataInjector(request.metadata_mut()))
-//     });
-
-//     Ok(request)
-// } 
-
-/// Serializable datastructure to hold the opentelemetry propagation context.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MetadataInjector(HashMap<String, String>);
-
-impl MetadataInjector {
-    fn empty() -> Self {
-        Self(HashMap::new())
-    }
-
-    pub fn inject(context: &opentelemetry::Context) -> Self {
-        global::get_text_map_propagator(|propagator| {
-            let mut propagation_context = MetadataInjector::empty();
-            propagator.inject_context(context, &mut propagation_context);
-            propagation_context
-        })
+/// Attempt to parse zigbee2mqtt/front-door => front-door
+fn parse_topic(topic: &str) -> &str {
+    if let Some(second_item) = topic.split('/').nth(1) {
+        second_item
+    } else {
+        topic
     }
 }
 
-impl Injector for MetadataInjector {
-    fn set(&mut self, key: &str, value: String) {
-        self.0.insert(key.to_owned(), value);
-}
+// Main handler for parsing mqtt event and forwarding any messages
+// we care about to our API to trigger alarm.
+#[instrument]
+async fn handle_incoming_publish_packet(publish: Publish) {
+    let topic = publish.topic;
+    let payload = publish.payload;
+
+    if let Err(e) = route_payload(&topic, &payload).await {
+        error!("{}", e);
+    }
 }
 
+#[instrument]
+async fn route_payload(topic: &str, payload: &[u8]) -> Result<()> {
+    let sensor_location = parse_topic(topic);
+
+    // Convert bytes object to serde_json::Value
+    let payload = serde_json::from_slice::<serde_json::Value>(payload)?;
+
+    // Handle vibration sensor trigger
+    if let Some(vibration) = payload.get("vibration") {
+        // We only care if the sensor has sensed a vibration
+        if vibration == true {
+            send_alarm_event_request(sensor_location, "VIBRATION").await?;
+        }
+    }
+
+    // Handle contact sensor trigger
+    if let Some(contact) = payload.get("contact") {
+        // We only care if the sensor has lost contact (e.g. window/door has been opened)
+        if contact == false {
+            send_alarm_event_request(sensor_location, "OPENED").await?;
+        }
+    }
+
+    Ok(())
+}
 
 /// Send request to alarm trigger endpoint of our API to trigger
 /// whichever alarm(s) is/are currently set.
 #[instrument]
 async fn send_alarm_event_request(sensor_location: &str, message: &str) -> Result<()> {
     let client = reqwest::Client::new();
-    // let span = global::tracer("zigme").start("say hello");
-    // let cx = Context::current_with_span(span);
-    // dbg!(cx);
-
-    // Retrieve the current span
-    let span = Span::current();
-    // Retrieve the current context
-    let cx = span.context();
-    
-    // Inject context into 
-    let injector = MetadataInjector::inject(&cx);
-    dbg!(&injector);
-
-    let (key, val) = injector.0.get_key_value("uber-trace-id").unwrap();
-
-    // let header_map = HeaderMap::from(injector);
     let response = client
-        .post(env::var("ZIGME_API_ALARM_TRIGGER_URI")?)
-        .header(key, val)
+        .post(env::var("ZIGME_API_ALARM_TRIGGER_URI").unwrap())
         .json(&json!({
             "title": sensor_location.to_string(),
             "message": message.to_string()
-        })).send().await?;
-
-    // span.in_scope(|| {       
-    //     let propagation_context = PropagationContext::inject(&span.context());
-    //     let spanned_message = SpannedMessage::new(propagation_context, message);
-    //     // kafka_send_message(producer, queue, spanned_message)
-    //     let response = req.send().await?;
-    //     })
-
-    // let response = req.send().await?;
+        }))
+        .send()
+        .await?;
 
     if response.status().is_success() {
         Ok(())

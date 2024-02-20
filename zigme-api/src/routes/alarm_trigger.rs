@@ -1,6 +1,4 @@
-use super::alarm_state;
-use crate::db::RedisClient;
-use crate::errors::AppError;
+use crate::{db::RedisClient, errors::AppError, routes::alarm_state};
 use axum::{extract::State, response::IntoResponse, Json};
 use reqwest;
 use serde::{Deserialize, Serialize};
