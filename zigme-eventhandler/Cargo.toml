@@ -1,0 +1,23 @@
+[package]
+name = "zigme-eventhandler"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rumqttc = "0.23.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full", "tracing"] }
+reqwest = { version = "0.11", features = ["json"] }
+anyhow = "1.0.79"
+dotenv = "0.15.0"
+chrono = "0.4.34"
+chrono-tz = "0.8.6"
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-opentelemetry = "0.17.2" 
+opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
+opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
