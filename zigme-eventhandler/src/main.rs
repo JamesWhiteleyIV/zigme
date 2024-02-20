@@ -1,18 +1,20 @@
 #![warn(clippy::pedantic)]
+mod tracer;
+
 use anyhow::Result;
-use opentelemetry::global;
+use chrono::{DateTime, Utc};
+use chrono_tz::Tz;
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, Publish, QoS};
 use serde_json::json;
 use std::env;
 use std::time::Duration;
-use tracing::{error, instrument, Level};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing::{error, instrument};
 
 // Main event loop for subscribing to mqtt topic
 #[tokio::main]
 async fn main() {
     // Setup telemetry tracer
-    setup_tracer();
+    tracer::setup_telemetry();
 
     // Load in environment vars
     dotenv::dotenv().ok();
@@ -39,32 +41,6 @@ async fn main() {
             handle_incoming_publish_packet(publish).await;
         }
     }
-}
-
-// Create and setup our global tracer for use with #instrument
-fn setup_tracer() {
-    // Allows you to pass along context (i.e., trace IDs) across services
-    global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-
-    // Sets up the machinery needed to export data to Jaeger
-    // There are other OTel crates that provide pipelines for the vendors
-    // mentioned earlier.
-    let tracer = opentelemetry_jaeger::new_pipeline()
-        .with_service_name("zigme")
-        .install_batch(opentelemetry::runtime::Tokio)
-        .unwrap();
-
-    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    let layer = tracing_subscriber::filter::Targets::new().with_default(Level::INFO);
-    tracing_subscriber::registry()
-        // log to open telemetry
-        .with(opentelemetry)
-        // log to stdout
-        .with(fmt::Layer::default())
-        // set log level to INFO
-        .with(layer)
-        .try_init()
-        .unwrap();
 }
 
 /// Attempt to parse zigbee2mqtt/front-door => front-door
@@ -114,6 +90,12 @@ async fn route_payload(topic: &str, payload: &[u8]) -> Result<()> {
     Ok(())
 }
 
+// Get the current datetime for Los Angeles
+fn get_la_timestamp() -> String {
+    let la_datetime: DateTime<Tz> = Utc::now().with_timezone(&Tz::America__Los_Angeles);
+    la_datetime.format("%Y-%m-%d %H:%M:%S %Z").to_string()
+}
+
 /// Send request to alarm trigger endpoint of our API to trigger
 /// whichever alarm(s) is/are currently set.
 #[instrument]
@@ -123,7 +105,8 @@ async fn send_alarm_event_request(sensor_location: &str, message: &str) -> Resul
         .post(env::var("ZIGME_API_ALARM_TRIGGER_URI").unwrap())
         .json(&json!({
             "title": sensor_location.to_string(),
-            "message": message.to_string()
+            "message": message.to_string(),
+            "timestamp": get_la_timestamp()
         }))
         .send()
         .await?;

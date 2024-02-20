@@ -36,6 +36,7 @@ async fn main() {
             "/alarm_trigger",
             post(routes::alarm_trigger::post_alarm_trigger_handler),
         )
+        .route("/events", get(routes::events::get_events_handler))
         .with_state(redis_client)
         .layer(
             TraceLayer::new_for_http()

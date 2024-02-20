@@ -1,6 +1,6 @@
 <!-- Main rendered page -->
-
 <script lang="ts">
+    import * as Table from "$lib/components/ui/table";
     import * as Card from "$lib/components/ui/card";
     import * as Collapsible from "$lib/components/ui/collapsible";
     import { Button } from "$lib/components/ui/button";
@@ -9,8 +9,9 @@
 
 	/** @type {import('./$types').PageData} */
 	export let data;
-    let alarmState: AlarmState = data;
-    console.log(alarmState);
+    console.log(data);
+    let alarmState = data.alarmState;
+    let alarmEvents = data.alarmEvents;
     
     async function phoneAlarmOn() {
         const payload = {
@@ -98,3 +99,22 @@
     </Card.Footer>
   </Card.Root>
 
+   
+  <Table.Root>
+    <Table.Header>
+      <Table.Row>
+        <Table.Head class="w-[100px]">Timestamp</Table.Head>
+        <Table.Head>Sensor Location</Table.Head>
+        <Table.Head>Message</Table.Head>
+      </Table.Row>
+    </Table.Header>
+    <Table.Body>
+      {#each alarmEvents as event, i (i)}
+        <Table.Row>
+          <Table.Cell class="font-medium">{event.timestamp}</Table.Cell>
+          <Table.Cell>{event.title}</Table.Cell>
+          <Table.Cell>{event.message}</Table.Cell>
+        </Table.Row>
+      {/each}
+    </Table.Body>
+  </Table.Root>

@@ -3,6 +3,7 @@ export async function POST() {
     const payload = {
         title: "test-title",
         message: "test-message",
+        timestamp: "0000-00-00 00:00:00 XXX"
     };
     const res = await fetch(`${import.meta.env.VITE_ZIGME_API_URI}/alarm_trigger`, {
         method: 'POST',

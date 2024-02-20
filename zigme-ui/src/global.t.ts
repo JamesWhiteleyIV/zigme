@@ -4,7 +4,8 @@ type AlarmState = {
     local_siren: boolean | null
 }
 
-type AlarmTrigger = {
+type AlarmEvent = {
     title: string
     message: string
+    timestamp: string
 }

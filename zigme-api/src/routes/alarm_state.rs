@@ -1,13 +1,10 @@
+use super::{STATE_LOCAL_SIREN, STATE_PHONE_ALARMS, STATE_PHONE_NOTIFICATIONS};
 use crate::db::RedisClient;
 use crate::errors::AppError;
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::instrument;
-
-pub const STATE_PHONE_ALARMS: &str = "phone_alarms";
-pub const STATE_PHONE_NOTIFICATIONS: &str = "phone_notifications";
-pub const STATE_LOCAL_SIREN: &str = "local_siren";
 
 /// Struct containing state of various alarms and notifications
 #[derive(Debug, Deserialize, Serialize)]

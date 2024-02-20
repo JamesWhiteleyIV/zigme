@@ -18,7 +18,7 @@ pub fn setup_telemetry() {
     let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     let layer = tracing_subscriber::filter::Targets::new().with_default(Level::INFO);
     tracing_subscriber::registry()
-        // Set log level to info
+        // set log level to INFO
         .with(layer)
         // log to open telemetry
         .with(opentelemetry)

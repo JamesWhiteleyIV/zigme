@@ -39,8 +39,20 @@ impl RedisClient {
         con.set(key, value)
     }
 
+    pub fn get_list<T>(&self, list_key: &str) -> RedisResult<Vec<T>>
+    where
+        T: FromRedisValue,
+    {
+        let mut con = self.get_connection()?;
+        let items: Vec<T> = con.lrange(list_key, 0, -1)?;
+        RedisResult::Ok(items)
+    }
+
     /// Function to push a new item onto the end of the list
-    pub fn push_item(&self, list_key: &str, item: &str) -> RedisResult<()> {
+    pub fn append_list<T>(&self, list_key: &str, item: T) -> RedisResult<()>
+    where
+        T: ToRedisArgs,
+    {
         let mut con = self.get_connection()?;
         con.rpush(list_key, item)
     }
@@ -62,5 +74,4 @@ impl RedisClient {
 
         RedisResult::Ok(())
     }
-
 }

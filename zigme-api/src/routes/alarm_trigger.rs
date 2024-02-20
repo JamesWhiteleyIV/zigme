@@ -1,18 +1,14 @@
-use crate::{db::RedisClient, errors::AppError, routes::alarm_state};
+use super::{
+    AlarmEvent, REDIS_EVENTS_LIST_KEY, REDIS_EVENTS_LIST_MAX_ITEMS, STATE_LOCAL_SIREN,
+    STATE_PHONE_ALARMS, STATE_PHONE_NOTIFICATIONS,
+};
+use crate::{db::RedisClient, errors::AppError};
 use axum::{extract::State, response::IntoResponse, Json};
 use reqwest;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::env;
 use std::sync::Arc;
 use tracing::instrument;
-
-/// Payload passed along with alarm trigger with
-/// information about what was triggered
-#[derive(Debug, Deserialize)]
-pub struct PostAlarmTriggerPayload {
-    title: String,
-    message: String,
-}
 
 /// Struct containing payload body to Pushover API
 #[derive(Debug, Serialize)]
@@ -84,43 +80,38 @@ async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppErro
 #[instrument(skip(redis_client))]
 pub async fn post_alarm_trigger_handler(
     State(redis_client): State<Arc<RedisClient>>,
-    Json(payload): Json<PostAlarmTriggerPayload>,
+    Json(payload): Json<AlarmEvent>,
 ) -> Result<impl IntoResponse, AppError> {
-    let local_siren: Option<bool> = redis_client.get(alarm_state::STATE_LOCAL_SIREN)?;
-    let phone_alarms: Option<bool> = redis_client.get(alarm_state::STATE_PHONE_ALARMS)?;
-    let phone_notifications: Option<bool> =
-        redis_client.get(alarm_state::STATE_PHONE_NOTIFICATIONS)?;
+    let local_siren: Option<bool> = redis_client.get(STATE_LOCAL_SIREN)?;
+    let phone_alarms: Option<bool> = redis_client.get(STATE_PHONE_ALARMS)?;
+    let phone_notifications: Option<bool> = redis_client.get(STATE_PHONE_NOTIFICATIONS)?;
 
     let mut results: Vec<String> = vec![];
     if let Some(local_siren) = local_siren {
         if local_siren {
             // TODO
             //send_local_siren_start().await?;
-            results.push(alarm_state::STATE_LOCAL_SIREN.to_string());
+            results.push(STATE_LOCAL_SIREN.to_string());
         }
     }
 
     if let Some(phone_alarms) = phone_alarms {
         if phone_alarms {
             send_phone_alarms(&payload.title, &payload.message).await?;
-            results.push(alarm_state::STATE_PHONE_ALARMS.to_string());
+            results.push(STATE_PHONE_ALARMS.to_string());
         }
     }
 
     if let Some(phone_notifications) = phone_notifications {
         if phone_notifications {
             send_phone_notifications(&payload.title, &payload.message).await?;
-            results.push(alarm_state::STATE_PHONE_NOTIFICATIONS.to_string());
+            results.push(STATE_PHONE_NOTIFICATIONS.to_string());
         }
     }
 
-    dbg!(1);
-    redis_client.push_item("events", &format!("{} {}", &payload.title, &payload.message))?;
-    dbg!(2);
-    redis_client.remove_oldest_item("events", 20)?;
-    dbg!(3);
-    let events: Option<Vec<String>> = redis_client.get("events")?;
-    dbg!(events);
+    // Add new event to list, removing oldest event if necessary
+    redis_client.append_list(REDIS_EVENTS_LIST_KEY, serde_json::to_string(&payload)?)?;
+    redis_client.remove_oldest_item(REDIS_EVENTS_LIST_KEY, REDIS_EVENTS_LIST_MAX_ITEMS)?;
 
     Ok(Json(results))
 }
