@@ -147,4 +147,6 @@ dist
 .pnp.*
 
 
+# TODO more of these probably
 redis-data/
+zigbee2mqtt-data/
