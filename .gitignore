@@ -145,3 +145,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+
+redis-data/
+zigbee2mqtt-data/
+mosquitto-data/

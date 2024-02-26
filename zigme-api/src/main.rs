@@ -20,10 +20,8 @@ use tracing::{info_span, Span};
 async fn main() {
     tracer::setup_telemetry();
 
-    dotenv::dotenv().ok();
-    let port = env::var("ZIGME_API_PORT").unwrap();
-    let redis_uri = env::var("ZIGME_REDIS_URI").unwrap();
-    let redis_client = Arc::new(db::RedisClient::new(&redis_uri));
+    let redis_url: String = env::var("ZIGME_REDIS_URL").unwrap_or("redis://127.0.0.1/".to_string());
+    let redis_client = Arc::new(db::RedisClient::new(&redis_url));
 
     let app = Router::new()
         .route("/", get(|| async { "OK" }))
@@ -78,7 +76,7 @@ async fn main() {
                 ),
         );
 
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:3020"))
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();

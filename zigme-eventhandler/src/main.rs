@@ -16,15 +16,12 @@ async fn main() {
     // Setup telemetry tracer
     tracer::setup_telemetry();
 
-    // Load in environment vars
-    dotenv::dotenv().ok();
-
-    let mqtt_host: String = env::var("ZIGME_MQTT_HOST").unwrap();
+    let mqtt_host: String = env::var("ZIGME_MQTT_HOST").unwrap_or("localhost".to_string());
     let mqtt_port: u16 = env::var("ZIGME_MQTT_PORT")
-        .unwrap()
+        .unwrap_or("1883".to_string())
         .parse()
         .expect("Could not parse ZIGME_MQTT_PORT as u16");
-    let mqtt_topic: String = env::var("ZIGME_MQTT_TOPIC").unwrap();
+    let mqtt_topic: String = env::var("ZIGME_MQTT_TOPIC").unwrap_or("zigbee2mqtt/+".to_string());
     let mut mqttoptions = MqttOptions::new("rumqtt-async", mqtt_host, mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(10));
 

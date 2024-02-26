@@ -1,0 +1,10 @@
+**/target
+**/.vs
+**/.vscode
+**/.env
+**/.git
+**/.gitignore
+**/compose
+**/docker-compose*
+**/Dockerfile*
+**/.dockerignore

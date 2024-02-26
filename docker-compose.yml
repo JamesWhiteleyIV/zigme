@@ -9,3 +9,83 @@ services:
     volumes:
       - ./redis-data:/data
     command: ["redis-server", "--appendonly", "yes", "--save", "300", "1"]
+  
+  jaeger:
+    image: jaegertracing/all-in-one:1.24
+    container_name: jaeger
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "14250:14250"
+      - "9411:9411"
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    command: "mosquitto -c /mosquitto-no-auth.conf"
+    environment:
+      - TZ=America/Los_Angeles
+    ports:
+      - 1883:1883
+      - 9001:9001
+    restart: unless-stopped
+    volumes:
+      - "./mosquitto-data:/mosquitto"
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    depends_on: 
+      - mqtt
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    environment:
+      - TZ=America/Los_Angeles
+    image: koenkk/zigbee2mqtt
+    ports:
+      # localhost:3001 will be running zigbee2mqtt UI
+      - 3001:3001
+    restart: unless-stopped
+    volumes:
+      - ./zigbee2mqtt-data:/app/data
+      - /run/udev:/run/udev:ro
+
+  zigme-api:
+    build:
+      context: ./zigme-api
+    depends_on: 
+      - redis
+      - jaeger
+    ports:
+      # localhost:3020 will be running API
+      - 3020:3020
+    env_file: 
+      - .env
+    restart: unless-stopped
+ 
+  zigme-ui:
+    build:
+      context: ./zigme-ui
+    depends_on: 
+      - zigme-api 
+    ports:
+      # localhost:3000 will be running zigme UI
+      - 3000:3000
+    env_file: 
+      - .env
+    restart: unless-stopped
+
+  zigme-eventhandler:
+    build:
+      context: ./zigme-eventhandler
+    depends_on: 
+      - zigbee2mqtt
+      - zigme-api
+    env_file: 
+      - .env
+    restart: unless-stopped
+    # network_mode: host

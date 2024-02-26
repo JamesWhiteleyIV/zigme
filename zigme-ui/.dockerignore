@@ -1,0 +1,16 @@
+**/target
+**/.vs
+**/.vscode
+**/.env
+**/.git
+**/.gitignore
+**/compose
+**/docker-compose*
+**/Dockerfile*
+**/.dockerignore
+**/node_modules
+**/npm-debug.log
+**/obj
+**/secrets.dev.yaml
+**/values.dev.yaml
+**/.classpath
