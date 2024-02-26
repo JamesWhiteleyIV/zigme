@@ -1,4 +1,4 @@
-# docker build -t test-ui:latest . && docker run --env-file=.env -p 3000:3000 test-ui:latest
+# docker build -t test-ui:latest . && docker run --env-file=../.env -p 3000:3000 test-ui:latest
 FROM node:21.6-alpine3.19 AS builder
 
 WORKDIR /app

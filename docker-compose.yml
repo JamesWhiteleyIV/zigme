@@ -47,31 +47,45 @@ services:
       - TZ=America/Los_Angeles
     image: koenkk/zigbee2mqtt
     ports:
+      # localhost:3001 will be running zigbee2mqtt UI
       - 3001:3001
     restart: unless-stopped
     volumes:
       - ./zigbee2mqtt-data:/app/data
       - /run/udev:/run/udev:ro
 
+  zigme-api:
+    build:
+      context: ./zigme-api
+    depends_on: 
+      - redis
+      - jaeger
+    ports:
+      # localhost:3020 will be running API
+      - 3020:3020
+    env_file: 
+      - .env
+    restart: unless-stopped
+ 
   zigme-ui:
     build:
       context: ./zigme-ui
-    env_file: 
-      - ./zigme-ui/.env
-    network_mode: host
-    restart: unless-stopped
-    volumes:
-      - ./data:/app/data
-      - ./zigbee2mqtt-data:/app/zigbee2mqtt-data
-  
-  eventhandler:
-    build:
-      context: ./eventhandler
     depends_on: 
-      - zigbee2mqtt
+      - zigme-api 
+    ports:
+      # localhost:3000 will be running zigme UI
+      - 3000:3000
     env_file: 
       - .env
-    network_mode: host
     restart: unless-stopped
-    volumes: 
-      - ./data:/app/data
+
+  zigme-eventhandler:
+    build:
+      context: ./zigme-eventhandler
+    depends_on: 
+      - zigbee2mqtt
+      - zigme-api
+    env_file: 
+      - .env
+    restart: unless-stopped
+    # network_mode: host

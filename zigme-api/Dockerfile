@@ -1,4 +1,4 @@
-# docker build -t test-api:latest . && docker run -p 3011:3011 --env-file=.env test-api:latest
+# docker build -t test-api:latest . && docker run -p 3020:3020 --env-file=../.env test-api:latest
 
 # Use the official Rust image as the base image
 FROM rust:1.76-bullseye AS builder
@@ -26,6 +26,8 @@ RUN apt-get update -y \
 
 # Copy the built binary from the builder stage to the final image
 COPY --from=builder /app/target/release/zigme-api ./
+
+EXPOSE 3020
 
 # Run the Axum web application when the Docker container starts
 CMD ["./zigme-api"]
