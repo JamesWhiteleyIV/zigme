@@ -5,7 +5,8 @@ export async function POST() {
 		message: 'test-message',
 		timestamp: '0000-00-00 00:00:00 XXX'
 	};
-	const res = await fetch(`${import.meta.env.VITE_ZIGME_API_URI}/alarm_trigger`, {
+    //TODO dont hardcode server url
+	const res = await fetch("http://zigme-api:3020/alarm_trigger", {
 		method: 'POST',
 		body: JSON.stringify(payload),
 		headers: {

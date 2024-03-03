@@ -9,7 +9,6 @@
 
 	/** @type {import('./$types').PageData} */
 	export let data;
-	console.log(data);
 	let alarmState = data.alarmState;
 	let alarmEvents = data.alarmEvents;
 
@@ -23,7 +22,7 @@
 			body: JSON.stringify(payload)
 		});
 		alarmState = await res.json();
-		console.log(alarmState);
+        console.log(alarmState);
 	}
 
 	async function phoneAlarmOff() {
