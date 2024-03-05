@@ -1,18 +1,25 @@
 # zigme
 Everything you should need for a zigbee2mqtt home alarm system.
 
-I still need to document usage, but in a nut-shell, update all the individual package .env.example files and rename to .env, then from the root directory run `docker compose up -d` to start all the docker processes.
 
-# TODO: better documentation
-# TODO: cleanup environment vars
+# TODO: 
+----------------------
+- Documentation
+- Cleanup environment var setup
+- Tests
+- Refactor 
+- Remove jaegar tracing in favor of stdout; I want all info spans to print to stdout and dont really care for full-blown jaegar setup
+  - https://stackoverflow.com/questions/70013172/how-to-use-the-tracing-library
 
-## Requirements
+Requirements
+----------------------
 npm and node; I used the following environment:
 - nvm v0.39.7
 - node v21.6.1
 
 
-## How to develop
+WIP: How to develop
+----------------------
 Install dependencies
 ```
 cd zigme-ui
@@ -23,5 +30,6 @@ Run dev server
 npm run dev -- --open
 ```
 
-# components
+Svelte Components
+----------------------
 https://www.shadcn-svelte.com/docs/components/card
