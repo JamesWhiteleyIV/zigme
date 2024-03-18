@@ -8,7 +8,6 @@ use reqwest;
 use serde::Serialize;
 use std::env;
 use std::sync::Arc;
-use tracing::instrument;
 
 /// Struct containing payload body to Pushover API
 #[derive(Debug, Serialize)]
@@ -32,8 +31,9 @@ struct PushoverPayload {
 // }
 
 /// Send request to pushover to trigger notification on phone
-#[instrument]
 async fn send_phone_notifications(title: &str, message: &str) -> Result<String, AppError> {
+    tracing::debug!("sending phone notification request to pushover api: title=\"{}\" message=\"{}\"", title, message);
+
     let payload = PushoverPayload {
         token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
         user: env::var("ZIGME_PUSHOVER_GROUP_KEY")?,
@@ -42,9 +42,11 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
         priority: 0,
         sound: None,
     };
+    let pushover_uri = env::var("ZIGME_PUSHOVER_URI")
+        .unwrap_or("https://api.pushover.net/1/messages.json".to_string());
     let client = reqwest::Client::new();
     let response = client
-        .post(env::var("ZIGME_PUSHOVER_URI")?)
+        .post(pushover_uri)
         .json(&payload)
         .send()
         .await?
@@ -54,8 +56,8 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
 }
 
 /// Send request to pushover to trigger alarm on phone
-#[instrument]
 async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppError> {
+    tracing::debug!("sending phone alarm request to pushover api: title=\"{}\" message=\"{}\"", title, message);
     let payload = PushoverPayload {
         token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
         user: env::var("ZIGME_PUSHOVER_GROUP_KEY")?,
@@ -65,8 +67,10 @@ async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppErro
         sound: Some("persistent".to_string()),
     };
     let client = reqwest::Client::new();
+    let pushover_uri = env::var("ZIGME_PUSHOVER_URI")
+        .unwrap_or("https://api.pushover.net/1/messages.json".to_string());
     let response = client
-        .post(env::var("ZIGME_PUSHOVER_URI")?)
+        .post(pushover_uri)
         .json(&payload)
         .send()
         .await?
@@ -77,11 +81,11 @@ async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppErro
 
 /// Submit a trigger which will trigger any set alarms/notifications
 /// from the redis db
-#[instrument(skip(redis_client))]
 pub async fn post_alarm_trigger_handler(
     State(redis_client): State<Arc<RedisClient>>,
     Json(payload): Json<AlarmEvent>,
 ) -> Result<impl IntoResponse, AppError> {
+    tracing::debug!("received alarm trigger request: {}", serde_json::to_string(&payload)?);
     let local_siren: Option<bool> = redis_client.get(STATE_LOCAL_SIREN)?;
     let phone_alarms: Option<bool> = redis_client.get(STATE_PHONE_ALARMS)?;
     let phone_notifications: Option<bool> = redis_client.get(STATE_PHONE_NOTIFICATIONS)?;

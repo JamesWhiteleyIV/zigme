@@ -5,7 +5,7 @@ pub mod alarm_trigger;
 pub mod events;
 
 pub const REDIS_EVENTS_LIST_KEY: &str = "events_list";
-pub const REDIS_EVENTS_LIST_MAX_ITEMS: u64 = 50;
+pub const REDIS_EVENTS_LIST_MAX_ITEMS: u64 = 100;
 pub const STATE_PHONE_ALARMS: &str = "phone_alarms";
 pub const STATE_PHONE_NOTIFICATIONS: &str = "phone_notifications";
 pub const STATE_LOCAL_SIREN: &str = "local_siren";

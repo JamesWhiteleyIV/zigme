@@ -3,10 +3,8 @@ use crate::db::RedisClient;
 use crate::errors::AppError;
 use axum::{extract::State, Json};
 use std::sync::Arc;
-use tracing::instrument;
 
 /// Get most recent events list
-#[instrument(skip(redis_client))]
 pub async fn get_events_handler(
     State(redis_client): State<Arc<RedisClient>>,
 ) -> Result<Json<Vec<AlarmEvent>>, AppError> {

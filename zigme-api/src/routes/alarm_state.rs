@@ -4,7 +4,6 @@ use crate::errors::AppError;
 use axum::{extract::State, Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::instrument;
 
 /// Struct containing state of various alarms and notifications
 #[derive(Debug, Deserialize, Serialize)]
@@ -14,25 +13,36 @@ pub struct AlarmState {
     local_siren: Option<bool>,
 }
 
-#[instrument(skip(redis_client))]
 async fn get_alarm_state(redis_client: Arc<RedisClient>) -> Result<AlarmState, AppError> {
     let phone_alarms: Option<bool> = redis_client.get(STATE_PHONE_ALARMS)?;
     let phone_notifications: Option<bool> = redis_client.get(STATE_PHONE_NOTIFICATIONS)?;
     let local_siren: Option<bool> = redis_client.get(STATE_LOCAL_SIREN)?;
 
-    Ok(AlarmState {
+    let alarm_state = AlarmState {
         phone_alarms,
         phone_notifications,
         local_siren,
-    })
+    };
+
+    tracing::debug!("state: {}", serde_json::to_string(&alarm_state)?);
+    Ok(alarm_state)
+}
+
+/// Get current alarm states
+pub async fn get_alarm_state_handler(
+    State(redis_client): State<Arc<RedisClient>>,
+) -> Result<Json<AlarmState>, AppError> {
+    // tracing::debug!("getting alarm state");
+    let alarm_state = get_alarm_state(redis_client).await?;
+    Ok(Json(alarm_state))
 }
 
 /// Update 1 or more alarm states and return all states as response
-#[instrument(skip(redis_client))]
 pub async fn put_alarm_state_handler(
     State(redis_client): State<Arc<RedisClient>>,
     Json(payload): Json<AlarmState>,
 ) -> Result<Json<AlarmState>, AppError> {
+    tracing::debug!("setting alarm state: {}", serde_json::to_string(&payload)?);
     if let Some(phone_alarms) = payload.phone_alarms {
         redis_client.set(STATE_PHONE_ALARMS, phone_alarms)?;
     }
@@ -47,11 +57,3 @@ pub async fn put_alarm_state_handler(
     Ok(Json(alarm_state))
 }
 
-/// Get current alarm states
-#[instrument(skip(redis_client))]
-pub async fn get_alarm_state_handler(
-    State(redis_client): State<Arc<RedisClient>>,
-) -> Result<Json<AlarmState>, AppError> {
-    let alarm_state = get_alarm_state(redis_client).await?;
-    Ok(Json(alarm_state))
-}
