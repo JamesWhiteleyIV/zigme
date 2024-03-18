@@ -36,7 +36,7 @@ Since this system involves multiple pieces, to test a single piece at a time you
 2. Run `docker compose up -d`
 
 
-## TODO --- everything below here ---
+### TODO --- everything below here ---
 
 ### Requirements
 npm and node; I used the following environment:
@@ -56,3 +56,4 @@ npm run dev -- --open
 
 ### Svelte Components
 https://www.shadcn-svelte.com/docs/components/card
+
