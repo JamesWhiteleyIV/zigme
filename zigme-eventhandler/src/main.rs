@@ -6,14 +6,15 @@ use rumqttc::{AsyncClient, Event, MqttOptions, Packet, Publish, QoS};
 use serde_json::json;
 use std::env;
 use std::time::Duration;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
 // Main event loop for subscribing to mqtt topic
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry()
-    .with(tracing_subscriber::fmt::layer())
-    .init();
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
 
     let mqtt_host: String = env::var("MQTT_HOST").unwrap_or("localhost".to_string());
     let mqtt_port: u16 = env::var("MQTT_PORT")
@@ -22,8 +23,8 @@ async fn main() {
         .unwrap();
     let mqtt_topic: String = env::var("MQTT_TOPIC").unwrap_or("zigbee2mqtt/+".to_string());
 
-    tracing::debug!("listening on mqtt address: {}:{}", mqtt_host, mqtt_port);
-    tracing::debug!("subscribing to mqtt topic: {}", mqtt_topic);
+    tracing::info!("listening on mqtt address: {}:{}", mqtt_host, mqtt_port);
+    tracing::info!("subscribing to mqtt topic: {}", mqtt_topic);
 
     let mut mqttoptions = MqttOptions::new("rumqtt-async", mqtt_host, mqtt_port);
     mqttoptions.set_keep_alive(Duration::from_secs(10));
@@ -68,7 +69,18 @@ async fn route_payload(topic: &str, payload: &[u8]) -> Result<()> {
     // Convert bytes object to serde_json::Value
     let payload = serde_json::from_slice::<serde_json::Value>(payload)?;
 
-    tracing::debug!("received from topic: {} payload: {}", topic, payload);
+    // {"battery":100,"contact":true,"device_temperature":26,"linkquality":102,"power_outage_count":81,"voltage":3015}
+    // {"battery":100,"device_temperature":21,"linkquality":72,"power_outage_count":9,"strength":5,"vibration":false,"voltage":3115}
+    // {"angle":68,"angle_x":-4,"angle_x_absolute":94,"angle_y":72,"angle_y_absolute":18,"angle_z":18,"battery":100,"device_temperature":26,"linkquality":138,"power_outage_count":12,"strength":2,"vibration":false,"voltage":3055,"x_axis":-78,"y_axis":1068,"z_axis":344}
+    // sensorName::: battery: int, linkquality: int, device_temperature: int, contact: Bool OR vibration: Bool
+
+    // Handle contact sensor trigger
+    if let Some(contact) = payload.get("contact") {
+        // We only care if the sensor has lost contact (e.g. window/door has been opened)
+        if contact == false {
+            send_alarm_event_request(sensor_location, "OPENED").await?;
+        }
+    }
 
     // Handle vibration sensor trigger
     if let Some(vibration) = payload.get("vibration") {
@@ -78,13 +90,8 @@ async fn route_payload(topic: &str, payload: &[u8]) -> Result<()> {
         }
     }
 
-    // Handle contact sensor trigger
-    if let Some(contact) = payload.get("contact") {
-        // We only care if the sensor has lost contact (e.g. window/door has been opened)
-        if contact == false {
-            send_alarm_event_request(sensor_location, "OPENED").await?;
-        }
-    }
+    // TODO
+    // send_device_state_change_request(sensor_location, payload).await?;
 
     Ok(())
 }
@@ -103,13 +110,36 @@ async fn send_alarm_event_request(sensor_location: &str, message: &str) -> Resul
     let port = env::var("ZIGME_API_PORT").unwrap_or("3020".to_string());
     let uri = format!("http://{}:{}/alarm_trigger", host, port);
 
-    tracing::debug!("sending request to {}", uri);
     let response = client
         .post(uri)
         .json(&json!({
             "title": sensor_location.to_string(),
             "message": message.to_string(),
             "timestamp": get_timestamp()
+        }))
+        .send()
+        .await?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err(response.error_for_status().unwrap_err().into())
+    }
+}
+
+/// Send request to update the state of this device
+async fn send_device_state_change_request(sensor_location: &str, state: serde_json::Value) -> Result<()> {
+    let client = reqwest::Client::new();
+    let host = env::var("ZIGME_API_HOST").unwrap_or("localhost".to_string());
+    let port = env::var("ZIGME_API_PORT").unwrap_or("3020".to_string());
+    let uri = format!("http://{}:{}/device_state_change", host, port);
+
+    let response = client
+        .put(uri)
+        .json(&json!({
+            "timestamp": get_timestamp(),
+            "sensor_location": sensor_location.to_string(),
+            "state": state,
         }))
         .send()
         .await?;

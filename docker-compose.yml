@@ -3,8 +3,6 @@ version: '3.8'
 services:
   redis:
     image: redis:latest
-    # ports:
-    #   - "6379:6379"
     restart: unless-stopped
     volumes:
       - ./redis-data:/data
@@ -16,9 +14,6 @@ services:
     command: "mosquitto -c /mosquitto-no-auth.conf"
     environment:
       - TZ=America/Los_Angeles
-    # ports:
-    #   - 1883:1883
-    #   - 9001:9001
     restart: unless-stopped
     volumes:
       - "./mosquitto-data:/mosquitto"
@@ -53,9 +48,9 @@ services:
     environment:
       - ZIGME_REDIS_URI=redis://redis/
       - ZIGME_PUSHOVER_URI=https://api.pushover.net/1/messages.json
-    # ports:
-    #   # localhost:3020 will be running API
-    #   - 3020:3020
+      - RUST_LOG=info
+    env_file: 
+      - .env
     restart: unless-stopped
  
   zigme-ui:
@@ -67,10 +62,6 @@ services:
     ports:
       # localhost:3000 will be running zigme UI
       - 3000:3000
-    # environment:
-    #   - ZIGME_API_URI=http://zigme-api:3020
-    # env_file: 
-    #   - .env
     restart: unless-stopped
 
   zigme-eventhandler:
@@ -86,6 +77,5 @@ services:
       - MQTT_TOPIC=zigbee2mqtt/+
       - ZIGME_API_HOST=zigme-api
       - ZIGME_API_PORT=3020
-    # env_file: 
-    #   - .env
+      - RUST_LOG=info
     restart: unless-stopped

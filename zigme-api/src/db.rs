@@ -20,6 +20,12 @@ impl RedisClient {
         self.client.get_connection()
     }
 
+    pub fn keys(&self, keys: &str) -> RedisResult<Vec<String>> {
+        let mut con = self.get_connection()?;
+        let keys: Vec<String> = con.keys(keys)?;
+        Ok(keys)
+    }
+
     /// Get a value from redis db
     pub fn get<T>(&self, key: &str) -> RedisResult<Option<T>>
     where

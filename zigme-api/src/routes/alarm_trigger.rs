@@ -32,8 +32,6 @@ struct PushoverPayload {
 
 /// Send request to pushover to trigger notification on phone
 async fn send_phone_notifications(title: &str, message: &str) -> Result<String, AppError> {
-    tracing::debug!("sending phone notification request to pushover api: title=\"{}\" message=\"{}\"", title, message);
-
     let payload = PushoverPayload {
         token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
         user: env::var("ZIGME_PUSHOVER_GROUP_KEY")?,
@@ -57,7 +55,6 @@ async fn send_phone_notifications(title: &str, message: &str) -> Result<String, 
 
 /// Send request to pushover to trigger alarm on phone
 async fn send_phone_alarms(title: &str, message: &str) -> Result<String, AppError> {
-    tracing::debug!("sending phone alarm request to pushover api: title=\"{}\" message=\"{}\"", title, message);
     let payload = PushoverPayload {
         token: env::var("ZIGME_PUSHOVER_API_TOKEN")?,
         user: env::var("ZIGME_PUSHOVER_GROUP_KEY")?,
@@ -85,7 +82,6 @@ pub async fn post_alarm_trigger_handler(
     State(redis_client): State<Arc<RedisClient>>,
     Json(payload): Json<AlarmEvent>,
 ) -> Result<impl IntoResponse, AppError> {
-    tracing::debug!("received alarm trigger request: {}", serde_json::to_string(&payload)?);
     let local_siren: Option<bool> = redis_client.get(STATE_LOCAL_SIREN)?;
     let phone_alarms: Option<bool> = redis_client.get(STATE_PHONE_ALARMS)?;
     let phone_notifications: Option<bool> = redis_client.get(STATE_PHONE_NOTIFICATIONS)?;

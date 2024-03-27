@@ -24,7 +24,6 @@ async fn get_alarm_state(redis_client: Arc<RedisClient>) -> Result<AlarmState, A
         local_siren,
     };
 
-    tracing::debug!("state: {}", serde_json::to_string(&alarm_state)?);
     Ok(alarm_state)
 }
 
@@ -32,7 +31,6 @@ async fn get_alarm_state(redis_client: Arc<RedisClient>) -> Result<AlarmState, A
 pub async fn get_alarm_state_handler(
     State(redis_client): State<Arc<RedisClient>>,
 ) -> Result<Json<AlarmState>, AppError> {
-    // tracing::debug!("getting alarm state");
     let alarm_state = get_alarm_state(redis_client).await?;
     Ok(Json(alarm_state))
 }
@@ -42,7 +40,6 @@ pub async fn put_alarm_state_handler(
     State(redis_client): State<Arc<RedisClient>>,
     Json(payload): Json<AlarmState>,
 ) -> Result<Json<AlarmState>, AppError> {
-    tracing::debug!("setting alarm state: {}", serde_json::to_string(&payload)?);
     if let Some(phone_alarms) = payload.phone_alarms {
         redis_client.set(STATE_PHONE_ALARMS, phone_alarms)?;
     }

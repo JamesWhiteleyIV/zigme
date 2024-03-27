@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+// pub mod device_state_change;
 pub mod alarm_state;
 pub mod alarm_trigger;
 pub mod events;

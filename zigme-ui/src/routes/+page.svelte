@@ -22,7 +22,7 @@
 			body: JSON.stringify(payload)
 		});
 		alarmState = await res.json();
-        console.log(alarmState);
+        // console.log(alarmState);
 	}
 
 	async function phoneAlarmOff() {
@@ -35,7 +35,7 @@
 			body: JSON.stringify(payload)
 		});
 		alarmState = await res.json();
-		console.log(alarmState);
+		// console.log(alarmState);
 	}
 
 	async function testAlarmTrigger() {
@@ -43,7 +43,7 @@
 			method: 'POST'
 		});
 		const data = await res.json();
-		console.log(data);
+		// console.log(data);
 	}
 </script>
 

@@ -29,10 +29,11 @@ A sveltekit user interface for setting alarm mode (phone alarm, phone notificati
 
 
 # How to dev locally
-Since this system involves multiple pieces, to test a single piece at a time you can comment out the item you want to work on from the docker-compose.yml, run everything else via `docker compose up` then run the other on its own for iterative development.
+The easiest way to test is to just run `docker compose up --build` to rebuild your containers and integrate test everything.
+If you are only working on a single part, for example lets say I am working on zigme-api, I can instead run `docker compose up --build zigme-api` to not rebuild everything.
 
 # How to run on your production server  
-1. Pull this repo to your server (I am using an old ubuntu dell precision 5530 laptop, you can probably user a raspberri pi but it was taking FOREVER to build this on it, and redis wasn't working properly)
+1. Pull this repo to your server (I am using an old ubuntu dell precision 5530 laptop, you can probably use a raspberry pi but it was taking FOREVER to build this on it, and redis wasn't working properly)
 2. Run `docker compose up -d`
 
 
