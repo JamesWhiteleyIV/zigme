@@ -7,10 +7,22 @@ use serde_json::json;
 use std::env;
 use std::time::Duration;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
+use std::fs;
+use std::path::Path;
+use tokio::time::sleep;
 
 // Main event loop for subscribing to mqtt topic
 #[tokio::main]
 async fn main() {
+    // Spawn a task to update the health check file
+    let health_file_path = "/tmp/zigme_eventhandler_health_check.txt";
+    tokio::spawn(async move {
+        loop {
+            fs::write(health_file_path, "Healthy").expect("Unable to write file");
+            sleep(Duration::from_secs(30)).await; // Update every 30 seconds
+        }
+    });
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .with(EnvFilter::from_default_env())

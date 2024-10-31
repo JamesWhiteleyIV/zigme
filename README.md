@@ -36,6 +36,19 @@ If you are only working on a single part, for example lets say I am working on z
 1. Pull this repo to your server (I am using an old ubuntu dell precision 5530 laptop, you can probably use a raspberry pi but it was taking FOREVER to build this on it, and redis wasn't working properly)
 2. Run `docker compose up -d`
 
+# How to check service health
+The following command will show the health status of each service:
+```
+sudo docker compose ps
+```
+To inspect what health checks are failing you can check the service individually with:
+```
+sudo docker inspect <service-name>
+```
+e.g.
+```
+sudo docker inspect zigme-api
+```
 
 ### TODO --- everything below here ---
 

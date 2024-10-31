@@ -7,6 +7,12 @@ services:
     volumes:
       - ./redis-data:/data
     command: ["redis-server", "--appendonly", "yes", "--save", "300", "1"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
   
   mqtt:
     container_name: mqtt
@@ -17,6 +23,12 @@ services:
     restart: unless-stopped
     volumes:
       - "./mosquitto-data:/mosquitto"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 1883 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   zigbee2mqtt:
     container_name: zigbee2mqtt
@@ -38,6 +50,12 @@ services:
     volumes:
       - ./zigbee2mqtt-data:/app/data
       - /run/udev:/run/udev:ro
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   zigme-api:
     container_name: zigme-api
@@ -52,6 +70,12 @@ services:
     env_file: 
       - .env
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3020"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
  
   zigme-ui:
     container_name: zigme-ui
@@ -63,6 +87,13 @@ services:
       # localhost:3000 will be running zigme UI
       - 3000:3000
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://0.0.0.0:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 
   zigme-eventhandler:
     container_name: zigme-eventhandler
@@ -79,3 +110,9 @@ services:
       - ZIGME_API_PORT=3020
       - RUST_LOG=info
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "if [ -f /tmp/zigme_eventhandler_health_check.txt ]; then [ $(($(date +%s) - $(stat -c %Y /tmp/zigme_eventhandler_health_check.txt))) -lt 30 ]; else exit 1; fi"]      
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
