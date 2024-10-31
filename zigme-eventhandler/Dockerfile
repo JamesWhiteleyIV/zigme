@@ -1,5 +1,3 @@
-# docker build -t test-eventhandler:latest . && docker run --env-file=../.env test-eventhandler:latest
-
 # Use the official Rust image as the base image
 FROM rust:1.76-bullseye AS builder
 

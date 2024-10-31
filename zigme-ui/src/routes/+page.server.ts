@@ -14,6 +14,6 @@ export async function load({ fetch }) {
 
 	const data = { alarmState, alarmEvents };
 
-	console.log(data);
+	// console.log(data);
 	return data;
 }

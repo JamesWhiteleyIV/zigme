@@ -1,5 +1,3 @@
-# docker build -t test-api:latest . && docker run -p 3020:3020 --env-file=../.env test-api:latest
-
 # Use the official Rust image as the base image
 FROM rust:1.76-bullseye AS builder
 

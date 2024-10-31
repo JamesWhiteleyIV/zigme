@@ -2,26 +2,23 @@
 mod db;
 mod errors;
 mod routes;
-mod tracer;
 
 use axum::{
-    body::Bytes,
-    extract::MatchedPath,
-    http::{HeaderMap, Request},
-    response::Response,
-    routing::{get, post},
+    routing::{put, get, post},
     Router,
 };
-use std::{env, sync::Arc, time::Duration};
-use tower_http::{classify::ServerErrorsFailureClass, trace::TraceLayer};
-use tracing::{info_span, Span};
+use std::{collections::HashMap, env, sync::Arc};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
-    tracer::setup_telemetry();
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .with(EnvFilter::from_default_env())
+        .init();
 
-    let redis_url: String = env::var("ZIGME_REDIS_URL").unwrap_or("redis://127.0.0.1/".to_string());
-    let redis_client = Arc::new(db::RedisClient::new(&redis_url));
+    let redis_uri: String = env::var("ZIGME_REDIS_URI").unwrap_or("redis://127.0.0.1/".to_string());
+    let redis_client = Arc::new(db::RedisClient::new(&redis_uri));
 
     let app = Router::new()
         .route("/", get(|| async { "OK" }))
@@ -34,50 +31,14 @@ async fn main() {
             "/alarm_trigger",
             post(routes::alarm_trigger::post_alarm_trigger_handler),
         )
+        // TODO
+        // .route("/device_state_change", get(routes::device_state_change::get_device_states_handler).put(routes::device_state_change::put_device_state_change_handler))
         .route("/events", get(routes::events::get_events_handler))
-        .with_state(redis_client)
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(|request: &Request<_>| {
-                    // Log the matched route's path (with placeholders not filled in).
-                    // Use request.uri() or OriginalUri if you want the real path.
-                    let matched_path = request
-                        .extensions()
-                        .get::<MatchedPath>()
-                        .map(MatchedPath::as_str);
-
-                    info_span!(
-                        "api_request",
-                        method = ?request.method(),
-                        matched_path,
-                        some_other_field = tracing::field::Empty,
-                    )
-                })
-                .on_request(|_request: &Request<_>, _span: &Span| {
-                    // You can use `_span.record("some_other_field", value)` in one of these
-                    // closures to attach a value to the initially empty field in the info_span
-                    // created above.
-                })
-                .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
-                    // ...
-                })
-                .on_body_chunk(|_chunk: &Bytes, _latency: Duration, _span: &Span| {
-                    // ...
-                })
-                .on_eos(
-                    |_trailers: Option<&HeaderMap>, _stream_duration: Duration, _span: &Span| {
-                        // ...
-                    },
-                )
-                .on_failure(
-                    |_error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
-                        // ...
-                    },
-                ),
-        );
+        .with_state(redis_client);
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:3020"))
         .await
         .unwrap();
+    tracing::info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }

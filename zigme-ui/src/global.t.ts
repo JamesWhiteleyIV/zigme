@@ -9,3 +9,4 @@ type AlarmEvent = {
 	message: string;
 	timestamp: string;
 };
+

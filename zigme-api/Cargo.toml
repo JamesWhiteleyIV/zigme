@@ -17,7 +17,3 @@ anyhow = "1.0.79"
 
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-tracing-opentelemetry = "0.17.2" 
-opentelemetry = { version = "0.17.0", features = ["rt-tokio"] }
-opentelemetry-jaeger = { version = "0.16.0", features = ["rt-tokio"] }
-tower-http = { version = "0.5.0", features = ["trace"] }
